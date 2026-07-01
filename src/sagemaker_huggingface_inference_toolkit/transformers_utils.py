@@ -80,6 +80,8 @@ FRAMEWORK_MAPPING = {
 
 REPO_ID_SEPARATOR = "__"
 
+TRANSFORMERS_V5_DEPRECATED_TASKS = {"question-answering"}
+
 ARCHITECTURES_2_TASK = {
     "TapasForQuestionAnswering": "table-question-answering",
     "ForQuestionAnswering": "question-answering",
@@ -247,6 +249,15 @@ def infer_task_from_hub(model_id: str, revision: Optional[str] = None, use_auth_
         )
 
 
+def _warn_if_transformers_v5_deprecated_task(task: str):
+    if task in TRANSFORMERS_V5_DEPRECATED_TASKS:
+        logger.warning(
+            "The %s pipeline is deprecated in v5 of Transformers and will no longer be available in future "
+            "Hugging Face Deep Learning Containers (DLCs).",
+            task,
+        )
+
+
 def get_pipeline(task: str, device: int, model_dir: Path, **kwargs) -> Pipeline:
     """
     create pipeline class for a specific task based on local saved model
@@ -255,6 +266,8 @@ def get_pipeline(task: str, device: int, model_dir: Path, **kwargs) -> Pipeline:
         raise EnvironmentError(
             "The task for this model is not set: Please set one: https://huggingface.co/docs#how-is-a-models-type-of-inference-api-and-widget-determined"
         )
+    _warn_if_transformers_v5_deprecated_task(task)
+
     # define tokenizer or feature extractor as kwargs to load it the pipeline correctly
     if task in {
         "automatic-speech-recognition",

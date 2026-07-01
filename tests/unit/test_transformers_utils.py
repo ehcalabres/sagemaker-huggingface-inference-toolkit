@@ -11,8 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import os
 import tempfile
+from unittest.mock import patch
 
 from transformers.testing_utils import require_torch, slow
 
@@ -104,6 +106,26 @@ def test_get_pipeline():
         pipe = get_pipeline(TASK, -1, storage_dir)
         res = pipe("Life is good, Life is bad")
         assert "score" in res[0]
+
+
+def test_get_pipeline_warns_for_transformers_v5_deprecated_task(caplog):
+    with patch("sagemaker_huggingface_inference_toolkit.transformers_utils.is_optimum_neuron_available") as neuron:
+        with patch("sagemaker_huggingface_inference_toolkit.transformers_utils.is_diffusers_available") as diffusers:
+            with patch("sagemaker_huggingface_inference_toolkit.transformers_utils.pipeline") as pipeline:
+                neuron.return_value = False
+                diffusers.return_value = False
+                pipeline.return_value = object()
+
+                with caplog.at_level(
+                    logging.WARNING,
+                    logger="sagemaker_huggingface_inference_toolkit.transformers_utils",
+                ):
+                    get_pipeline("question-answering", -1, "model")
+
+    assert (
+        "The question-answering pipeline is deprecated in v5 of Transformers and will no longer be available in future "
+        "Hugging Face Deep Learning Containers (DLCs)."
+    ) in caplog.text
 
 
 def test_infer_task_from_hub():
